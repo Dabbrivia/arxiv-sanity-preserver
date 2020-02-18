@@ -25,6 +25,7 @@ import regex
 seed(1337)
 max_train = 25000 # max number of tfidf training documents (chosen randomly), for memory efficiency
 max_features = 5000
+bucketname = 'abbrivia.private-arxiv'
 
 # read database
 db = pickle.load(open(Config.db_path, 'rb'))
@@ -39,6 +40,18 @@ def read_txt_path(p):
       txt = "" 
   return txt
 
+import boto3
+def read_txt_s3(p):
+  s3 = boto3.resource('s3')
+  obj = s3.Object(bucketname, os.path.join('jpg_txt', p) )
+  try:
+    txt = obj.get()['Body'].read()
+    print(p, 'success')
+  except Exception as e:
+    txt = ""
+    print(p, 'failure', e)
+  return txt
+
 txt_paths, pids = [], []
 n = 0
 for pid,j in db.items():
@@ -48,21 +61,25 @@ for pid,j in db.items():
 
   if j['_rawid'][:4].isdigit() and '.' in j['_rawid']: # this is the current scheme from 0707
     schema='0707'
-    txt_path = os.path.join('data', 'txt'
-            , j['_rawid'][:4]
+    txt_path = os.path.join(
+             j['_rawid'][:4]
             , j['_rawid']+'.txt') # YYMM/YYMM.xxxxx.pdf (number of xxx is variable)
   elif '/' in j['_rawid']: #some rawids had the category and the id
    shema='slash'
-   txt_path = os.path.join('data', 'txt'
-           , j['_rawid'].split("/")[1][:4].split("-")[0]
+   txt_path = os.path.join(
+            j['_rawid'].split("/")[1][:4].split("-")[0]
            , "".join(j['_rawid'].split("/"))+'.txt') #YYMM/catYYMMxxxxx.pdf
   else: # this is for rawid with no category, but we split category from metadata on the dot (if it has one)
     schema='else'
-    txt_path = os.path.join('data', 'txt'
-           , j['_rawid'][:4].split("-")[0]
+    txt_path = os.path.join(
+            j['_rawid'][:4].split("-")[0]
            , j['arxiv_primary_category']['term'].split(".")[0]+j['_rawid']+'.txt') #YYMM/catYYMMxxxxx.pdf
-  if os.path.isfile(txt_path): # some pdfs dont translate to txt
-    txt = read_txt_path(txt_path)
+
+  txt = read_txt_s3(txt_path)
+  if txt != "":
+#  txt_path = os.path.join('data', 'txt', txt_path)  
+#  if os.path.isfile(txt_path): # some pdfs dont translate to txt      
+#      txt = read_txt_path(txt_path)
 
     if len(txt) > 1000 and len(txt) < 500000: # 500K is VERY conservative upper bound
       txt_paths.append(txt_path) # todo later: maybe filter or something some of them
@@ -88,7 +105,7 @@ v = TfidfVectorizer(input='content',
 # create an iterator object to conserve memory
 def make_corpus(paths):
   for p in paths:
-    yield read_txt_path(p)      
+    yield read_txt_s3(p)      
 
 # train
 train_txt_paths = list(txt_paths) # duplicate
