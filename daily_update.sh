@@ -1,30 +1,27 @@
 #!/bin/bash
 # add to crontab -e 
-# 16 04 * * * . /home/ubuntu/.profile; /home/ubuntu/arxiv-sanity-preserver/daily_update.sh 2>>/data/daily_update.log
+# 16 04 * * * . /home/ubuntu/.profile; /home/ubuntu/arxiv-sanity-preserver/daily_update.sh 2>/data/daily_update.log
 # the single dot is the command to source profile
-export HOMEDIR=/home/ubuntu
 source "$HOMEDIR"/env/bin/activate; # python virtualenv environment
-export WORKDIR="$HOMEDIR/asps/"
+export WORKDIR="/data/asps"
 # array of dirnames for all fields of arXiv we want and their handles
 unset -v FIELDS
 declare -A FIELDS
-FIELDS[cond-mat]='physics:cond-mat'
+FIELDS[arxiv-sanity-preserver]='physics:cond-mat'
+#FIELDS[cond-mat]='physics:cond-mat'
 FIELDS[cs]='cs'
 # the exclamation mark makes sure we list indexes (dirnames)
-for FIELD in "${!FIELDS[@]}"; do mkdir -p "$WORKDIR/$FIELD"; done;
+for FIELD in "${!FIELDS[@]}";
+	do
+	       	mkdir -p "$WORKDIR/$FIELD"; 
+		cp /home/ubuntu/arxiv-sanity-preserver/{OAI_seed_db.py,parse_OAI_XML.py,utils.py} "$WORKDIR/$FIELD/"
+		cd "$WORKDIR/$FIELD"; python "$WORKDIR/$FIELD/OAI_seed_db.py" \
+			--from-date '2020-02-21' --set "${FIELDS[$FIELD]}";  # how to set from-date?
+	done;	
 
-
-
-
+# this is common for all fields and should be run only once
 cd /home/ubuntu/arxiv-sanity-preserver/;
-python /home/ubuntu/arxiv-sanity-preserver/OAI_seed_db.py --from-date '2020-02-01' --set "physics:cond-mat"; 
-#python OAI_seed_db.py --from-date '2020-02-01' --set "cs"; 
-
-
-
-
-
-python /home/ubuntu/arxiv-sanity-preserver/download_pdfs.py  # how to set from-date?
+python /home/ubuntu/arxiv-sanity-preserver/download_pdfs.py
 
 # For PDF to txt conversion 
 # fix imagemagic policy issue preventing creation of the thumbnails
@@ -97,18 +94,22 @@ fi
 SSH
 time rsync -r --size-only --progress /data/txt/ "$WORKER_CONNECT":/data/txt
 
+#rsync -havz --progress /home/ubuntu/arxiv-sanity-preserver/ \
+#	"$WORKER_CONNECT":/home/ubuntu/arxiv-sanity-preserver
+
+
+
 
 function run_analyse_on_worker {
 FIELD="$1"
 scp /home/ubuntu/"$FIELD"/db.p \
-"$WORKER_CONNECT":/home/ubuntu/"$FIELD"/
-#rsync -havz --progress /home/ubuntu/"$FIELD"/ "$WORKER_CONNECT":/home/ubuntu/"$FIELD"/
+"$WORKER_CONNECT":/home/ubuntu/arxiv-sanity-preserver/
 time ssh "$WORKER_CONNECT" << SSH
-source /home/ubuntu/env/bin/activate; cd /home/ubuntu/"$FIELD"/; \
+source /home/ubuntu/env/bin/activate; cd /home/ubuntu/arxiv-sanity-preserver/; \
 python analyze.py;
 SSH
 for file in sim_dict.p tfidf.p tfidf_meta.p; do scp \
-""$WORKER_CONNECT":/data/pickles/$file" /data/pickles/ ; done;
+""$WORKER_CONNECT":/data/pickles/$file" /home/ubuntu/"$FIELD"/ ; done;
 /snap/bin/aws ec2 stop-instances --region eu-central-1 --instance-ids "$WORKER_ID" 
 source /home/ubuntu/env/bin/activate; cd /home/ubuntu/"$FIELD"/; python buildsvm.py; \
 python /home/ubuntu/"$FIELD"/make_cache.py;
