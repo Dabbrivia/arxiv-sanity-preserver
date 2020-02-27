@@ -11,14 +11,14 @@ class Config(object):
     # main paper information repo file
     db_path = 'db.p'
     # intermediate processing folders
-    pdf_dir = os.path.join('/', 'data', 'pdf')
-    txt_dir = os.path.join('/', 'data', 'txt')
-    thumbs_dir = os.path.join('static', 'thumbs')
+    pdf_dir = os.path.join('data', 'pdf') # these are not public
+    txt_dir = os.path.join('data', 'txt') # these are not public
+    thumbs_dir = os.path.join('static', 'thumbs') # these are public
     # intermediate pickles
-    tfidf_path = os.path.join('/', 'data', 'pickles','tfidf.p')
-    meta_path = os.path.join('/', 'data', 'pickles','tfidf_meta.p')
-    sim_path = os.path.join('/', 'data', 'pickles','sim_dict.p')
-    user_sim_path = os.path.join('/', 'data', 'pickles','user_sim.p')
+    tfidf_path = 'tfidf.p'
+    meta_path = 'tfidf_meta.p'
+    sim_path = 'sim_dict.p'
+    user_sim_path = 'user_sim.p'
     # sql database file
     db_serve_path = 'db2.p' # an enriched db.p with various preprocessing info
     database_path = 'as.db'
