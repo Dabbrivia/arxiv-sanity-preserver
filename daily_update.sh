@@ -2,10 +2,28 @@
 # add to crontab -e 
 # 16 04 * * * . /home/ubuntu/.profile; /home/ubuntu/arxiv-sanity-preserver/daily_update.sh 2>>/data/daily_update.log
 # the single dot is the command to source profile
-source /home/ubuntu/env/bin/activate; 
+export HOMEDIR=/home/ubuntu
+source "$HOMEDIR"/env/bin/activate; # python virtualenv environment
+export WORKDIR="$HOMEDIR/asps/"
+# array of dirnames for all fields of arXiv we want and their handles
+unset -v FIELDS
+declare -A FIELDS
+FIELDS[cond-mat]='physics:cond-mat'
+FIELDS[cs]='cs'
+# the exclamation mark makes sure we list indexes (dirnames)
+for FIELD in "${!FIELDS[@]}"; do mkdir -p "$WORKDIR/$FIELD"; done;
+
+
+
+
 cd /home/ubuntu/arxiv-sanity-preserver/;
 python /home/ubuntu/arxiv-sanity-preserver/OAI_seed_db.py --from-date '2020-02-01' --set "physics:cond-mat"; 
 #python OAI_seed_db.py --from-date '2020-02-01' --set "cs"; 
+
+
+
+
+
 python /home/ubuntu/arxiv-sanity-preserver/download_pdfs.py  # how to set from-date?
 
 # For PDF to txt conversion 
@@ -78,15 +96,23 @@ mkdir -p /data/txt; mkdir -p /data/pickles;
 fi
 SSH
 time rsync -r --size-only --progress /data/txt/ "$WORKER_CONNECT":/data/txt
-scp /home/ubuntu/arxiv-sanity-preserver/db.p \
-"$WORKER_CONNECT":/home/ubuntu/arxiv-sanity-preserver/
-#rsync -havz --progress /home/ubuntu/arxiv-sanity-preserver/ "$WORKER_CONNECT":/home/ubuntu/arxiv-sanity-preserver/
+
+
+function run_analyse_on_worker {
+FIELD="$1"
+scp /home/ubuntu/"$FIELD"/db.p \
+"$WORKER_CONNECT":/home/ubuntu/"$FIELD"/
+#rsync -havz --progress /home/ubuntu/"$FIELD"/ "$WORKER_CONNECT":/home/ubuntu/"$FIELD"/
 time ssh "$WORKER_CONNECT" << SSH
-source /home/ubuntu/env/bin/activate; cd /home/ubuntu/arxiv-sanity-preserver/; \
+source /home/ubuntu/env/bin/activate; cd /home/ubuntu/"$FIELD"/; \
 python analyze.py;
 SSH
 for file in sim_dict.p tfidf.p tfidf_meta.p; do scp \
 ""$WORKER_CONNECT":/data/pickles/$file" /data/pickles/ ; done;
 /snap/bin/aws ec2 stop-instances --region eu-central-1 --instance-ids "$WORKER_ID" 
-source /home/ubuntu/env/bin/activate; cd /home/ubuntu/arxiv-sanity-preserver/; python buildsvm.py; \
-python /home/ubuntu/arxiv-sanity-preserver/make_cache.py;
+source /home/ubuntu/env/bin/activate; cd /home/ubuntu/"$FIELD"/; python buildsvm.py; \
+python /home/ubuntu/"$FIELD"/make_cache.py;
+
+}
+export -f run_analyse_on_worker
+run_analyse_on_worker 'arxiv-sanity-preserver'
