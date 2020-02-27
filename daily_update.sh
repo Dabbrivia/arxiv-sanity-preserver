@@ -2,7 +2,8 @@
 # add to crontab -e 
 # 16 04 * * * . /home/ubuntu/.profile; /home/ubuntu/arxiv-sanity-preserver/daily_update.sh 2>/data/daily_update.log
 # the single dot is the command to source profile
-source "$HOMEDIR"/env/bin/activate; # python virtualenv environment
+export HOMEDIR="/home/ubuntu"; # python virtualenv environment
+source "$HOMEDIR/env/bin/activate"; # python virtualenv environment
 export WORKDIR="/data/asps"
 # array of dirnames for all fields of arXiv we want and their handles
 unset -v FIELDS
@@ -13,10 +14,13 @@ FIELDS[cs]='cs'
 # the exclamation mark makes sure we list indexes (dirnames)
 for FIELD in "${!FIELDS[@]}";
 	do
-	       	mkdir -p "$WORKDIR/$FIELD"; 
+	       	mkdir -p "$WORKDIR/$FIELD/data"; 
+	       	ln -s "$PDFDIR" "$WORKDIR/$FIELD/data/pdf"; 
+	       	ln -s "$TXTDIR" "$WORKDIR/$FIELD/data/txt"; 
 		cp /home/ubuntu/arxiv-sanity-preserver/{OAI_seed_db.py,parse_OAI_XML.py,utils.py} "$WORKDIR/$FIELD/"
 		cd "$WORKDIR/$FIELD"; python "$WORKDIR/$FIELD/OAI_seed_db.py" \
 			--from-date '2020-02-21' --set "${FIELDS[$FIELD]}";  # how to set from-date?
+		python "$WORKDIR/$FIELD/download_pdfs.py"
 	done;	
 
 # this is common for all fields and should be run only once
