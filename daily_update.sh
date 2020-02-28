@@ -20,7 +20,9 @@ for FIELD in "${!FIELDS[@]}";
 	       	mkdir -p "$WORKDIR/$FIELD/data"; 
 	       	ln -s "$PDFDIR" "$WORKDIR/$FIELD/data/pdf"; 
 	       	ln -s "$TXTDIR" "$WORKDIR/$FIELD/data/txt"; 
-		cp /home/ubuntu/arxiv-sanity-preserver/{OAI_seed_db,parse_OAI_XML,download_pdfs,utils,buildsvm,make_cache}.py "$WORKDIR/$FIELD/"
+		cp /home/ubuntu/arxiv-sanity-preserver/{OAI_seed_db,parse_OAI_XML,download_pdfs,utils,buildsvm,make_cache,serve,twitter_daemon}.py "$WORKDIR/$FIELD/"
+		cp /home/ubuntu/arxiv-sanity-preserver/{pdf_failed_conversion_to.jpg,schema.sql,ui.jpeg,run_sever.sh} "$WORKDIR/$FIELD/"
+		# TODO sqlite3 as.db < schema.sql, secret_key.txt, twitter_txt
 		cd "$WORKDIR/$FIELD"; python "$WORKDIR/$FIELD/OAI_seed_db.py" \
 			--from-date '2020-02-21' --set "${FIELDS[$FIELD]}";  # how to set from-date?
 		python "$WORKDIR/$FIELD/download_pdfs.py"
