@@ -5,6 +5,8 @@
 export HOMEDIR="/home/ubuntu"; # python virtualenv environment
 source "$HOMEDIR/env/bin/activate"; # python virtualenv environment
 export WORKDIR="/data/asps"
+export PDFDIR="/data/pdf"
+export TXTDIR="/data/txt"
 # array of dirnames for all fields of arXiv we want and their handles
 unset -v FIELDS
 declare -A FIELDS
@@ -17,15 +19,15 @@ for FIELD in "${!FIELDS[@]}";
 	       	mkdir -p "$WORKDIR/$FIELD/data"; 
 	       	ln -s "$PDFDIR" "$WORKDIR/$FIELD/data/pdf"; 
 	       	ln -s "$TXTDIR" "$WORKDIR/$FIELD/data/txt"; 
-		cp /home/ubuntu/arxiv-sanity-preserver/{OAI_seed_db.py,parse_OAI_XML.py,utils.py} "$WORKDIR/$FIELD/"
+		cp /home/ubuntu/arxiv-sanity-preserver/{OAI_seed_db.py,parse_OAI_XML.py,download_pdfs.py,utils.py} "$WORKDIR/$FIELD/"
 		cd "$WORKDIR/$FIELD"; python "$WORKDIR/$FIELD/OAI_seed_db.py" \
 			--from-date '2020-02-21' --set "${FIELDS[$FIELD]}";  # how to set from-date?
 		python "$WORKDIR/$FIELD/download_pdfs.py"
 	done;	
 
 # this is common for all fields and should be run only once
-cd /home/ubuntu/arxiv-sanity-preserver/;
-python /home/ubuntu/arxiv-sanity-preserver/download_pdfs.py
+#cd /home/ubuntu/arxiv-sanity-preserver/;
+#python /home/ubuntu/arxiv-sanity-preserver/download_pdfs.py
 
 # For PDF to txt conversion 
 # fix imagemagic policy issue preventing creation of the thumbnails
@@ -105,19 +107,23 @@ time rsync -r --size-only --progress /data/txt/ "$WORKER_CONNECT":/data/txt
 
 
 function run_analyse_on_worker {
-FIELD="$1"
-scp /home/ubuntu/"$FIELD"/db.p \
+FIELDDIR="$1"
+scp "$FIELDDIR/db.p" \
 "$WORKER_CONNECT":/home/ubuntu/arxiv-sanity-preserver/
 time ssh "$WORKER_CONNECT" << SSH
 source /home/ubuntu/env/bin/activate; cd /home/ubuntu/arxiv-sanity-preserver/; \
 python analyze.py;
 SSH
 for file in sim_dict.p tfidf.p tfidf_meta.p; do scp \
-""$WORKER_CONNECT":/data/pickles/$file" /home/ubuntu/"$FIELD"/ ; done;
-/snap/bin/aws ec2 stop-instances --region eu-central-1 --instance-ids "$WORKER_ID" 
-source /home/ubuntu/env/bin/activate; cd /home/ubuntu/"$FIELD"/; python buildsvm.py; \
-python /home/ubuntu/"$FIELD"/make_cache.py;
-
+""$WORKER_CONNECT":/data/pickles/$file" "$FIELDDIR/" ; done;
+source "$HOMEDIR/env/bin/activate"; cd "$FIELDDIR"; python "$FIELDDIR/buildsvm.py"; \
+python "$FIELDDIR/make_cache.py";
 }
 export -f run_analyse_on_worker
-run_analyse_on_worker 'arxiv-sanity-preserver'
+
+for FIELD in "${!FIELDS[@]}";
+	do
+		run_analyse_on_worker "$WORKDIR/$FIELD";
+	done;
+
+/snap/bin/aws ec2 stop-instances --region eu-central-1 --instance-ids "$WORKER_ID" 
