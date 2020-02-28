@@ -16,10 +16,11 @@ FIELDS[cs]='cs'
 # the exclamation mark makes sure we list indexes (dirnames)
 for FIELD in "${!FIELDS[@]}";
 	do
+		echo "Downloading Papers into directory $FIELD for arXiv Field ${FIELDS[$FIELD]}"
 	       	mkdir -p "$WORKDIR/$FIELD/data"; 
 	       	ln -s "$PDFDIR" "$WORKDIR/$FIELD/data/pdf"; 
 	       	ln -s "$TXTDIR" "$WORKDIR/$FIELD/data/txt"; 
-		cp /home/ubuntu/arxiv-sanity-preserver/{OAI_seed_db.py,parse_OAI_XML.py,download_pdfs.py,utils.py} "$WORKDIR/$FIELD/"
+		cp /home/ubuntu/arxiv-sanity-preserver/{OAI_seed_db,parse_OAI_XML,download_pdfs,utils,buildsvm,make_cache}.py "$WORKDIR/$FIELD/"
 		cd "$WORKDIR/$FIELD"; python "$WORKDIR/$FIELD/OAI_seed_db.py" \
 			--from-date '2020-02-21' --set "${FIELDS[$FIELD]}";  # how to set from-date?
 		python "$WORKDIR/$FIELD/download_pdfs.py"
@@ -123,6 +124,7 @@ export -f run_analyse_on_worker
 
 for FIELD in "${!FIELDS[@]}";
 	do
+		echo "Trainig SVM for arXiv Field ${FIELDS[$FIELD]}";
 		run_analyse_on_worker "$WORKDIR/$FIELD";
 	done;
 
