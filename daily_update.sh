@@ -1,4 +1,5 @@
 #!/bin/bash
+# vi: tabstop=2 expandtab shiftwidth=2 softtabstop=2
 # add to crontab -e 
 # 16 04 * * * . /home/ubuntu/.profile; /home/ubuntu/arxiv-sanity-preserver/daily_update.sh 2>/data/daily_update.log
 # the single dot is the command to source profile
@@ -7,6 +8,8 @@ source "$HOMEDIR/env/bin/activate"; # python virtualenv environment
 export WORKDIR="/data/asps"
 export PDFDIR="/data/pdf"
 export TXTDIR="/data/txt"
+export JPGDIR="/data/jpg"
+export SOURCEROOT="/home/ubuntu/arxiv-sanity-preserver/"
 # array of dirnames for all fields of arXiv we want and their handles
 unset -v FIELDS
 declare -A FIELDS
@@ -16,13 +19,21 @@ FIELDS[cs]='cs'
 # the exclamation mark makes sure we list indexes (dirnames)
 for FIELD in "${!FIELDS[@]}";
 	do
+		if ! [ -d "$WORKDIR/$FIELD" ]; then 
+			echo "Setting up directory $WORKDIR/$FIELD for field ${FIELDS[$FIELD]}"
+			mkdir -p "$WORKDIR/$FIELD/data"; 
+			mkdir -p "$WORKDIR/$FIELD/tmp"
+			ln -s "$PDFDIR" "$WORKDIR/$FIELD/data/pdf"; 
+			ln -s "$TXTDIR" "$WORKDIR/$FIELD/data/txt"; 
+			#ln -s "$JPGDIR" "$WORKDIR/$FIELD/static/thumbs" 
+			cp "$SOURCEROOT"{OAI_seed_db,parse_OAI_XML,download_pdfs,utils}.py "$WORKDIR/$FIELD/"
+			cp "$SOURCEROOT"{buildsvm,make_cache,serve,twitter_daemon}.py "$WORKDIR/$FIELD/"
+			cp "$SOURCEROOT"{pdf_failed_conversion_to.jpg,ui.jpeg,schema.sql,run_sever.sh} "$WORKDIR/$FIELD/"
+			cp -r /home/ubuntu/arxiv-sanity-preserver/{static,templates}/ "$WORKDIR/$FIELD/"
+			cd "$WORKDIR/$FIELD" && sqlite3 as.db < schema.sql
+			# TODO cp and edit secret_key.txt, twitter_txt
+		fi
 		echo "Downloading Papers into directory $FIELD for arXiv Field ${FIELDS[$FIELD]}"
-	       	mkdir -p "$WORKDIR/$FIELD/data"; 
-	       	ln -s "$PDFDIR" "$WORKDIR/$FIELD/data/pdf"; 
-	       	ln -s "$TXTDIR" "$WORKDIR/$FIELD/data/txt"; 
-		cp /home/ubuntu/arxiv-sanity-preserver/{OAI_seed_db,parse_OAI_XML,download_pdfs,utils,buildsvm,make_cache,serve,twitter_daemon}.py "$WORKDIR/$FIELD/"
-		cp /home/ubuntu/arxiv-sanity-preserver/{pdf_failed_conversion_to.jpg,schema.sql,ui.jpeg,run_sever.sh} "$WORKDIR/$FIELD/"
-		# TODO sqlite3 as.db < schema.sql, secret_key.txt, twitter_txt
 		cd "$WORKDIR/$FIELD"; python "$WORKDIR/$FIELD/OAI_seed_db.py" \
 			--from-date '2020-02-21' --set "${FIELDS[$FIELD]}";  # how to set from-date?
 		python "$WORKDIR/$FIELD/download_pdfs.py"
