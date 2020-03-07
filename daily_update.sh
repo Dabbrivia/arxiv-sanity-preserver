@@ -16,6 +16,10 @@ declare -A FIELDS
 FIELDS[arxiv-sanity-preserver]='physics:cond-mat'
 FIELDS[cond-mat]='physics:cond-mat'
 FIELDS[cs]='cs'
+
+# prepare to download pdfs for this month
+mkdir -p "$PDFDIR/$(date +%y%m)"
+
 # the exclamation mark makes sure we list indexes (dirnames)
 for FIELD in "${!FIELDS[@]}";
 	do
