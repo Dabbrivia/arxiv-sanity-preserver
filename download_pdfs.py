@@ -32,6 +32,7 @@ def fetch_url(j):
   pdf_url = pdfs[0] + '.pdf'
   basename = pdf_url.split('/')[-1]
   pid=None # TODO refactor utils.py to drop pid in signature, we don't need it there
+  #TODO check if the path to save the file exists and create the subdirectory
   fname = os.path.join(Config.pdf_dir,dir_basename_from_pid(pid,j)+'.pdf')
   pdf_url = 'http://export.arxiv.org/pdf/'+ basename
 

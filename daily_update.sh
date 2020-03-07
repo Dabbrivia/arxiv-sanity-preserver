@@ -14,11 +14,12 @@ export SOURCEROOT="/home/ubuntu/arxiv-sanity-preserver/"
 unset -v FIELDS
 declare -A FIELDS
 FIELDS[arxiv-sanity-preserver]='physics:cond-mat'
-#FIELDS[cond-mat]='physics:cond-mat'
+FIELDS[cond-mat]='physics:cond-mat'
 FIELDS[cs]='cs'
 # the exclamation mark makes sure we list indexes (dirnames)
 for FIELD in "${!FIELDS[@]}";
 	do
+    echo "Processing $FIELD"
 		if ! [ -d "$WORKDIR/$FIELD" ]; then 
 			echo "Setting up directory $WORKDIR/$FIELD for field ${FIELDS[$FIELD]}"
 			mkdir -p "$WORKDIR/$FIELD/data"; 
@@ -26,17 +27,17 @@ for FIELD in "${!FIELDS[@]}";
 			ln -s "$PDFDIR" "$WORKDIR/$FIELD/data/pdf"; 
 			ln -s "$TXTDIR" "$WORKDIR/$FIELD/data/txt"; 
 			#ln -s "$JPGDIR" "$WORKDIR/$FIELD/static/thumbs" 
-			cp "$SOURCEROOT"{OAI_seed_db,parse_OAI_XML,download_pdfs,utils}.py "$WORKDIR/$FIELD/"
-			cp "$SOURCEROOT"{buildsvm,make_cache,serve,twitter_daemon}.py "$WORKDIR/$FIELD/"
-			cp "$SOURCEROOT"{pdf_failed_conversion_to.jpg,ui.jpeg,schema.sql,run_sever.sh} "$WORKDIR/$FIELD/"
-			cp -r /home/ubuntu/arxiv-sanity-preserver/{static,templates}/ "$WORKDIR/$FIELD/"
-			cd "$WORKDIR/$FIELD" && sqlite3 as.db < schema.sql
+			cp "$SOURCEROOT"{OAI_seed_db,parse_OAI_XML,download_pdfs,utils}.py "$WORKDIR/$FIELD/";
+			cp "$SOURCEROOT"{buildsvm,make_cache,serve,twitter_daemon}.py "$WORKDIR/$FIELD/";
+			cp "$SOURCEROOT"{pdf_failed_conversion_to.jpg,ui.jpeg,schema.sql,run_sever.sh} "$WORKDIR/$FIELD/";
+			cp -r /home/ubuntu/arxiv-sanity-preserver/{static,templates}/ "$WORKDIR/$FIELD/";
+			cd "$WORKDIR/$FIELD" && sqlite3 as.db < schema.sql ;
 			# TODO cp and edit secret_key.txt, twitter_txt
-		fi
-		echo "Downloading Papers into directory $FIELD for arXiv Field ${FIELDS[$FIELD]}"
+		fi;
+		echo "Downloading Papers into directory $FIELD for arXiv Field ${FIELDS[$FIELD]}";
 		cd "$WORKDIR/$FIELD"; python "$WORKDIR/$FIELD/OAI_seed_db.py" \
 			--from-date '2020-02-21' --set "${FIELDS[$FIELD]}";  # how to set from-date?
-		python "$WORKDIR/$FIELD/download_pdfs.py"
+		python "$WORKDIR/$FIELD/download_pdfs.py";
 	done;	
 
 # this is common for all fields and should be run only once
